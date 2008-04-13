@@ -1,0 +1,108 @@
+README FOR THE APPS DIRECTORY
+-----------------------------
+
+The /apps directory is where you put configuration files for each backend
+application SwitchPipe has control over. These configuration files are
+in YAML format and must be in the form:
+
+  <application name>.yml
+
+Example configuration files are with the demo apps in /demo_apps. To
+test SwitchPipe, just copy demo_apps/webrick_thing.yml into this 
+directory, then start SwitchPipe and try to access the webrick_thing
+app, like so:
+
+  http://127.0.0.1:10000/webrick_thing/
+
+SwitchPipe automatically checks for .yml files in this directory, and
+will even update configurations while it is running, so be careful
+when playing with files in the apps folder on a production machine!
+Note that "touching" a file will cause it to be reloaded if you have
+made no other changes. This can be useful if you are switching files
+around for some reason or another.
+
+APPLICATION CONFIGURATION FILE FORMAT
+-------------------------------------
+
+The most bare bones configuration file would look like this:
+
+	path: demo_apps
+	cmd: ruby webrick_thing [[PORT]]
+
+No timeout is specified (internal default of 300 seconds is used), no user/group is
+specified, no maximum number of instances is specified. It's really bare bones.
+
+A more advanced configuration file, using many features, however, looks like this:
+
+	path: /Users/peter/dev/rails/app1
+	type: thin
+	max_instances: 12
+	timeout: 9
+	user: peter
+	group: peter
+	socket_type: unix
+	hostname: myapplication.com
+	
+This configuration file runs a Rails app using the Thin HTTP daemon (an alternative
+to Mongrel) on the backend, uses up to 12 concurrent instances, times out any
+processes unused for over 9 seconds, enforces a user and group to run the application
+under, and uses SwitchPipe's alpha UNIX socket support (which Thin can use). It also
+responds directly to requests looking for myapplication.com.. no subdirectory name
+required!
+
+A more typical Rails deployment would look like this (this is actually used for
+http://www.jrubyinside.com/ in production):
+
+	path: /home/jruby/inside
+	type: mongrel_rails
+	max_instances: 3
+	timeout: 15
+	user: jruby
+	group: jruby
+
+The settings you can use are:
+
+	        path: Specify the directory to change to before running a command, 
+	              such as mongrel_rails, thin, or whatever is necessary to launch 
+	              a single instance of the backend application.
+	
+          	 cmd: The actual command to run to get an instance of the backend
+                  application running. For a Rails app, this could be something
+                  like: mongrel_rails start -p [[PORT]] -e production
+
+                  It is necessary to use the placeholder [[PORT]] in all cmd lines
+                  so that SwitchPipe can tell the backend application which port to
+                  run on. (For UNIX sockets, merely use the [[PORT]] within a socket
+                  filename as a unique identifier.)
+
+  	        type: A shortcut to avoid remembering and typing in many cmd lines.
+                  Currently only "mongrel_rails" and "thin" are supported. The cmd
+                  lines are automatically adjusted if users / groups are specified
+                  (or, on "thin" only, UNIX sockets are used).
+
+   max_instances: The maximum number of concurrent instances of the backend app
+                  to run. All concurrency is handled "behind the scenes" by 
+                  SwitchPipe, so if you have the resources, be generous. For a
+                  quiet Rails app, 2 or 3 instances might work okay, but try up to
+                  10 or 15 if things get busy.
+
+   min_instances: A minimum number of instances to have running for the application
+                  at all times.
+
+        hostname: The hostname (or hostnames, if you make an array of names) that the
+                  application is available for, if you want SwitchPipe to serve that
+                  application directly. See online documentation for more help.
+
+         timeout: The maximum number of seconds a backend application can "idle"
+                  without getting any requests before it is killed by SwitchPipe.
+                  The timeout enables your server to be clean of processes that are
+                  sitting around doing nothing but hogging memory!
+
+            user: Specify a group and user to run the backend application as. 
+           group: Currently this is only of use if you use the "type" field or
+                  use [[USER]] and [[GROUP]] placeholders in your cmd line. No
+                  suEXEC-type arrangements or support yet. The backend app must
+                  deal with that for now (luckily things like Mongrel and Thin do!)
+                 
+
+

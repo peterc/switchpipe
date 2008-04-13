@@ -1,0 +1,239 @@
+SwitchPipe 1.05
+By Peter Cooper
+~~~~ February 10, 2008 (development began January 11, 2008)
+switchpipe@peterc.org
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+THE LATEST, CANONICAL DOCUMENTATION FOR SWITCHPIPE IS LOCATED AT:
+http://groups.google.com/group/switchpipe/web
+
+THE DOCUMENTATION BELOW IS INCLUDED MERELY TO HELP IF YOU'RE IN A RUSH OR UNABLE 
+TO VISIT THE ONLINE VERSION. IT IS INCOMPLETE, SECTIONS MAY BE INACCURATE, AND 
+THE ONLINE DOCUMENTATION EXPLAINS A LOT MORE AND IS MORE UP TO DATE.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+
+WHAT IS SWITCHPIPE?
+-------------------
+Online @ http://groups.google.com/group/switchpipe/web/introduction-overview
+
+SwitchPipe is a proof of concept "Web application server." More accurately,
+it's a Web application process manager and request dispatcher / proxy. Backend 
+HTTP-speaking applications (Web applications) do not run directly within
+SwitchPipe, but are loaded into their own processes making SwitchPipe language
+and framework agnostic.
+
+SwitchPipe takes control of, and manages, the backend application processes, 
+including loading and proxying to multiple instances of each application in a
+round-robin style configuration. As an administrator, you can define the maximum
+number of backend processes to run for each app, along with other settings so 
+that you do not exceeded preferred resource limits. SwitchPipe quickly removes
+processes that "break" or otherwise outlive their welcome. For example, you can
+let SwitchPipe kill any backend processes that have not been accessed for, say,
+20 seconds. This makes hosting many multiple Rails applications, for example, a
+quick and non-memory demanding process, ideal for shared hosting environments.
+
+SwitchPipe proxies incoming HTTP requests at the TCP level, using information 
+extracted from the HTTP request and headers to work out which backend application
+is required to handle the request.
+
+SwitchPipe's goal is to be:
+
+  * super easy to configure
+  * the easiest way to deploy multiple HTTP-talking backend applications
+  * painless in terms of management; no hand-holding of different applications is needed
+  * a permanent daemon that can handle configuration changes in backend apps "on the fly"
+  * a reliable solution on Linux and OS/X (and anything POSIX compatible, ideally)
+
+
+QUICK INSTALL / STEPS TO SEEING A QUICK DEMO OF SWITCHPIPE
+----------------------------------------------------------
+Online @ http://groups.google.com/group/switchpipe/web/installation-instructions
+
+Run the "demo" script from SwitchPipe's base directory:
+  # ./script/demo
+
+The "demo" script does everything that the manual process below does, except it runs
+SwitchPipe as a daemon temporarily, does one test request, then closes down and
+cleans up.
+
+OR DO IT "THE MANUAL WAY" (preferred by all true hackers)...
+
+Install dependencies:
+  # sudo gem install daemons eventmachine open4
+
+Instate configuration file:
+  # cp config.yml.example config.yml
+
+Move application configurations for the demo apps into the "apps" directory:
+  # mv demo_apps/*.yml apps/
+
+Run SwitchPipe as an interactive process:
+  # ./script/switchpipe run
+
+Visit these URLs in a browser:
+  http://127.0.0.1:10000/webrick_thing/
+  http://127.0.0.1:10000/python_http_server/ (won't run unless Python is installed)
+  http://127.0.0.1:10000/camping_demo_app/ (won't run unless Camping is installed)
+
+You should notice SwitchPipe start and manage the relevant processes, killing them
+whenever the timeouts kick in. Use CTRL+C to break out of SwitchPipe's non-daemonized
+mode. In future use ./script/switchpipe start and ./script/switchpipe stop to start
+and stop SwitchPipe as a daemonized process.
+
+Information about setting up SwitchPipe as a system service in /etc/init.d, etc, is
+available within SwitchPipe's online documentation.
+
+
+THE KEY STEPS TO GETTING STARTED FOR YOUR OWN APPS
+--------------------------------------------------
+Online @ http://groups.google.com/group/switchpipe/web/setting-up-your-own-webapps-with-switchpipe
+(significantly more up to date than this)
+
+1) Put YAML files into /apps
+	Example for Rails:
+		path: /Users/peter/dev/rails/app1
+		type: mongrel_rails
+		max_instances: 6
+		timeout: 60
+
+	Example for WEBrick / regular app:
+		path: demo_apps
+		cmd: ruby webrick_thing [[PORT]]
+		single_threaded: false
+
+	Example for Camping:
+		path: demo_apps
+		cmd: camping -p [[PORT]] camping_demo.rb
+		max_instances: 1
+		timeout: 15
+
+2) Make sure config.yml exists, by copying config.yml.example to config.yml and tweaking.
+
+3) Run ./script/switchpipe run  
+   Note: This runs it as a regular process, not daemonized.
+         To daemonize use ./script/switchpipe start and ./script/switchpipe stop
+
+4) Make your main HTTP server (Apache / Nginx / whatever) proxy requests to SwitchPipe at directories with the same name as the YAML files you made.
+	Example: If your YAML file is some_rails_app.yml, then proxy to http://switchpipe-host.example.com/some_rails_app/
+			 If your YAML file is acampingapp.yml, then proxy to http://switchpipe-host.example.com/acampingapp/
+			
+	mod_proxy / <VirtualHost> example:
+	         ProxyPass / http://127.0.0.1:10000/rails_app_name/
+             ProxyPassReverse / http://127.0.0.1:10000/rails_app_name/
+
+    .htaccess example (useful so that Apache can serve static files!):
+             RewriteEngine On
+             RewriteCond %{REQUEST_FILENAME} !-f
+             RewriteRule ^(.*)$ http://127.0.0.1:10000/rails_app_name/$1 [P]
+
+5) Enjoy watching the output of SwitchPipe as it starts and stops backend processes as you access the different apps.
+
+
+EXAMPLE OF ADDING AN APPLICATION
+--------------------------------
+Online @ http://groups.google.com/group/switchpipe/web/setting-up-your-own-webapps-with-switchpipe
+
+Let's say you've developed a Rails application and you want SwitchPipe to manage it. Just 
+create a new YAML file in /apps called rails_app_name.yml (or anything, but the base name
+of the file name is used as the app's identifier), and drop in a few lines like so:
+
+path: /path/to/the/rails/app
+type: mongrel_rails
+max_instances: 6
+timeout: 8
+
+Restart SwitchPipe, or merely wait a few seconds until it picks up the new file itself, and
+the application is made available, with up to six backend processes, in seconds at
+a directory just off of SwitchPipe's main URL. For example: http://switchpipe/rails_app_name
+
+You can deploy Camping, Merb, or even plain old WEBrick apps in the same way. As long
+as it can be run at a prompt, given a specific port to run on, and talk HTTP, SwitchPipe will
+deploy it. That goes for Ruby and non-Ruby apps.
+
+To complete the setup, you would then configure your normal Apache, nginx, or other
+main HTTP daemon to forward requests to a particular domain / virtual host / directory
+through to SwitchPipe at the relevant folder. For example, from Apache <Virtualhost>
+directives:
+
+  ProxyPass / http://127.0.0.1:10000/rails_app_name/
+  ProxyPassReverse / http://127.0.0.1:10000/rails_app_name/
+
+An even better way to do it, if possible, is from a .htaccess file. Example:
+
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^(.*)$ http://127.0.0.1:10000/rails_app_name/$1 [P]
+
+The benefit of this technique is that static files can be served up by Apache at usual
+breakneck speed!
+
+No more port numbers. No more setting up individual clusters for different apps. No
+more worrying about how different frameworks handle clustering. Hurrah!
+
+Note that a "hostname" config variable can also be used on applications to serve up the
+application through SwitchPipe DIRECTLY. This means you can serve up apps WITHOUT Apache
+or Nginx in front of SwitchPipe!
+
+
+TO DOS
+------
+Online @ http://groups.google.com/group/switchpipe/web/todos-limitations
+
+ * Improve error handling
+ * Web-accessible status / information URL
+ * Caching (potentially)
+ * Test suite
+ * Test SwitchPipe on more platforms and architectures (OS X and Linux on i386/686 tested so far)
+ * Improve documentation and Web site
+ * Stream HTTP message bodies over a certain size to backend apps rather than buffer the whole lot in SwitchPipe
+   (this becomes a necessity when dealing with huge HTTP uploads, say)
+
+CONTRIBUTORS
+------------
+
+ - Peter Cooper is / was the primary developer of SwitchPipe (so far).
+ - Jason Stirk provided a key patch in April 2008 that resolved hanging issues.
+ - Mike Auclair provided a fix so that trailing slashes are not necessary on app names
+
+"LICENSE"
+---------
+Online @ http://groups.google.com/group/switchpipe/web/licensing-information
+
+This work is hereby released into the Public Domain. To view a copy of the public 
+domain dedication, visit http://creativecommons.org/licenses/publicdomain/ or send
+a letter to Creative Commons, 171 Second Street, Suite 300, San Francisco, 
+California, 94105, USA.
+
+SwitchPipe is distributed and made available with the freedoms of the
+public domain, but with a stern reminder to be ethical.
+
+This software / content / other work is released into the public 
+domain. Do what you want with it, but may your conscience and 
+moral compass encourage you to be a good guy (or gal). Being good means:
+
+ * Not using the same, identical name or title for any substantially
+   different or derived works in such a way that confusion could be
+   caused amongst other users.
+
+ * Providing the original author(s) with feedback, notices, patches
+   or credit relating to further extended usage of the work. It's
+   only the decent thing to do.
+
+THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES
+OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR 
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+OR THE USE OR OTHER DEALINGS IN THIS WORK.
+
+Note: If you or your company REQUIRES a license for SwitchPipe (e.g.
+company policy), Peter Cooper can prove you with one for a fee. Contact
+details can be found at http://www.petercooper.co.uk/. The same applies
+to anyone who wishes to support Peter Cooper in his work on SwitchPipe.
+Thank you.

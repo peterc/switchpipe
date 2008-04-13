@@ -1,0 +1,6 @@
+path: /Users/peter/dev/rails/app1
+type: mongrel_rails
+max_instances: 12
+timeout: 9
+user: peter
+group: peter

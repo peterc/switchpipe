@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'daemons'
+
+switchpipe_path = File.expand_path(File.dirname(__FILE__))
+switchpipe_lib_path = File.join(switchpipe_path, '..', 'lib', 'switchpipe')
+
+Daemons.run_proc('switchpipe', :dir_mode => :normal, :dir => switchpipe_path) do
+  require switchpipe_lib_path
+  sleep 1
+  SwitchPipe::Server.new.run
+end

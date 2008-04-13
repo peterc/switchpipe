@@ -1,0 +1,4 @@
+path: demo_apps
+cmd: python python_http_server.py [[PORT]]
+timeout: 10
+max_instances: 8

@@ -1,0 +1,5 @@
+path: demo_apps
+cmd: camping -p [[PORT]] camping_demo.rb
+max_instances: 12
+timeout: 15
+hostname: camping.co

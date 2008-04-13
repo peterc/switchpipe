@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+
+# A hacky little script that keeps SwitchPipe up and running
+# Just call it from a cron that runs every minute or so
+# Replace /usr/bin/env ruby at the top with the absolute path
+# to your Ruby interpreter in case of issues (some systems have
+# lacking PATHs under cron)
+
+local_dir = File.join(File.dirname(__FILE__))
+
+pid_file = local_dir + "/switchpipe.pid"
+
+if File.exist?(pid_file)
+        pid = File.read(pid_file).to_i
+        puts "Got PID (#{pid})"
+        begin
+          Process.kill(0, pid)
+          puts "SwitchPipe running okay!"
+        rescue
+          puts "No SwitchPipe found! Relaunching.."
+          File.unlink(pid_file)
+          `/etc/init.d/switchpipe restart`
+        end
+else
+        # No PID file, relaunch SwitchPipe!
+        puts "No PID.. Relaunching SwitchPipe!"
+        `/etc/init.d/switchpipe restart`
+end

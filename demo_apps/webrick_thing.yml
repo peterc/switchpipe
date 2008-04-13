@@ -1,0 +1,6 @@
+path: demo_apps
+cmd: ruby webrick_thing [[PORT]]
+single_threaded: false
+timeout: 20
+user: nobody
+group: nobody

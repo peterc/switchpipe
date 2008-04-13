@@ -1,0 +1,49 @@
+#!/bin/sh
+#
+# switchpipe:   Backend Web application controller and proxy
+#
+# chkconfig: 345 96 99
+# description:  http://switchpipe.org/
+#
+
+SWITCHPIPE_PATH="/usr/local/switchpipe"
+SWITCHPIPE_RUNNER="$SWITCHPIPE_PATH/script/switchpipe"
+PATH=$PATH:/usr/local/bin:/opt/local/bin
+
+# Sanity checks.
+[ -x $SWITCHPIPE_RUNNER ] || exit 0
+
+start() {
+    echo "Starting switchpipe daemon.."
+    $SWITCHPIPE_RUNNER start
+}
+
+stop() {
+    echo "Stopping switchpipe daemon.."
+    $SWITCHPIPE_RUNNER stop
+	sleep 2
+}
+
+# See how we were called.
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    condrestart)
+        ;;
+    reload)
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}"
+        ;;
+esac
+exit $RETVAL

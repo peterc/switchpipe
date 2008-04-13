@@ -1,0 +1,48 @@
+#!/bin/sh
+
+echo "> Checking and installing dependencies"
+echo "  Note: If you are asked for your password, this is due to sudo, so it's safe."
+echo "  : open4"
+ruby -rubygems -e "begin; require 'open4'; rescue LoadError; exit 1; end" || sudo gem install open4
+echo "  : eventmachine"
+ruby -rubygems -e "begin; require 'eventmachine'; rescue LoadError; exit 1; end" || sudo gem install eventmachine
+echo "  : daemons"
+ruby -rubygems -e "begin; require 'daemons'; rescue LoadError; exit 1; end" || sudo gem install daemons
+echo
+echo "> Copying demo app configuration files to apps/"
+cp demo_apps/*.yml apps/
+echo
+echo "> Copying config.yml.example to config.yml"
+cp config.yml.example config.yml
+echo
+echo "> Starting SwitchPipe as a daemonized (background) process"
+./script/switchpipe start
+echo
+echo "> Waiting"
+sleep 2.5
+echo
+echo "> Requesting a backend app through SwitchPipe (http://127.0.0.1:10000/webrick_thing/)"
+echo
+ruby -e "require 'open-uri'; puts open('http://127.0.0.1:10000/webrick_thing/').read"
+echo
+echo
+echo "> And why not again?"
+echo
+ruby -e "require 'open-uri'; puts open('http://127.0.0.1:10000/webrick_thing/').read"
+echo
+echo
+echo "> Stopping SwitchPipe's daemonized process"
+echo
+./script/switchpipe stop
+echo "DEMO COMPLETE!"
+echo
+echo "Press CTRL+C within the next 5 seconds to avoid cleaning up demo files and restoring SwitchPipe to its raw state"
+sleep 5
+echo
+echo "> Deleting config file"
+rm config.yml
+echo
+echo "> Deleting demo apps configs from apps/"
+rm -f apps/*.yml
+echo
+echo "THE END!"

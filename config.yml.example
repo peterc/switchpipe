@@ -1,0 +1,28 @@
+# config.yml for SwitchPipe
+#
+# Accepts the following options:
+#
+#   host:                -- specify the local host / address for SwitchPipe to bind to 
+#                             (127.0.0.1 should be okay in most cases)
+#
+#   port:                -- specify the local port number for SwitchPipe to bind to 
+#                             (10000 should be okay in most cases)
+#
+#   backend_port_start:  -- specify the first port in the port range to be used for backend servers
+#                             (60000 is a fine default - beware not to conflict with potential FTP port ranges though)
+#
+#   backend_port_end:    -- specify the final port in the port range to be used for backend servers
+#                             (61000 is a fine default)
+#
+#   user:                -- specify which user to change to once the socket for incoming connections is opened
+#
+#   status_update:       -- specify how often to show the app instance stats when in non-daemonized mode (default is 5 seconds)
+#
+#   inactivity_timeout:  -- specify after how many seconds of inactivity a connection should be dropped (default is 30 seconds)
+
+
+host: 127.0.0.1
+port: 10000
+backend_port_start: 60000
+backend_port_end: 61000
+status_update: 2

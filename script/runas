@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+
+# runas - Run another program under the privileges of a specified user and group.
+# This is necessary because sudo demands a password, as we need it to be hands off.
+# A poor man's suexec basically.
+
+require 'etc'
+
+user, group, cmd = ARGV
+
+begin
+  uid = Etc.getpwnam(user).uid
+  gid = Etc.getgrnam(group).gid
+
+  unless Process.euid == uid && Process.egid == gid
+    Process.initgroups(user, gid)
+    Process::GID.change_privilege(gid)
+    Process::UID.change_privilege(uid)
+  end
+
+  exec cmd
+rescue
+  puts "Could not run as #{user}:#{group}"
+  exit 1
+end
